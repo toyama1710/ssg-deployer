@@ -2,6 +2,7 @@ use std::io::*;
 use std::fs;
 use std::path::Path;
 use std::net::*;
+use std::time::Duration;
 mod depcl;
 
 fn main() {
@@ -15,7 +16,8 @@ fn main() {
     }
 
     let addr = addr.unwrap().find(|x| (*x).is_ipv4()).unwrap();
-    match TcpStream::connect(addr) {
+    match TcpStream::connect_timeout(&addr,
+                Duration::from_millis(2000)) {
         Err(e) => {
             eprintln!("{:?}", e);
             return;
