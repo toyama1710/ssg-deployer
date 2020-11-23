@@ -1,7 +1,8 @@
-use std::io::*;
+use deployer::tcp_wrap::*;
 use std::fs;
-use std::path::Path;
+use std::io::*;
 use std::net::*;
+use std::path::Path;
 use std::time::Duration;
 mod depcl;
 
@@ -10,27 +11,40 @@ fn main() {
     let dir = Path::new(&dir);
     let addr = format!("{}:{}", host, port);
     let addr = addr.to_socket_addrs();
-    if let Err(_) = addr { 
+
+    if let Err(e) = addr {
         eprintln!("can't resolve host");
+        eprintln!("{:?}", e);
         return;
     }
 
     let addr = addr.unwrap().find(|x| (*x).is_ipv4()).unwrap();
-    match TcpStream::connect_timeout(&addr,
-                Duration::from_millis(2000)) {
+    match TcpStream::connect_timeout(&addr, Duration::from_millis(2000)) {
         Err(e) => {
-            eprintln!("{:?}", e);
-            return;
+            panic!("{:?}", e);
         }
-        Ok(stream) => {
-            let mut reader = BufReader::new(&stream);
-            let mut writer = BufWriter::new(&stream);
-            let mut msg = String::new();
+        Ok(mut stream) => {
+            stream
+                .set_read_timeout(Some(Duration::from_millis(3000)))
+                .unwrap();
+            stream
+                .set_write_timeout(Some(Duration::from_millis(3000)))
+                .unwrap();
 
-            writer.write(section.as_bytes()).unwrap();
+            stream.write(section.as_bytes()).unwrap();
+            stream.flush().unwrap();
 
-            // auth
             /*
+            if let Err(e) = depcl::auth(&stream, &key) {
+                panic!("{:?}", e);
+            }
+            */
+
+            /*
+            if let Err(e) = auth() {
+                eprintln!("{:?}", e);
+                return Err(e);
+            }
             */
 
             // send_hashs()
