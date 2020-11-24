@@ -1,6 +1,6 @@
 use crate::tcp_wrap::*;
 use openssl::rsa::{Padding, Rsa};
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, Read, Write};
 use std::io::{Error, ErrorKind};
 use std::net::TcpStream;
@@ -27,6 +27,7 @@ pub fn auth(
     dst_pri.read_exact(&mut buf)?;
     let dst_pri = Rsa::private_key_from_pem(buf.as_slice())?;
 
+    println!("check");
     let n_slice = own_pub.n().to_vec();
     let e_slice = own_pub.e().to_vec();
     stream.write_msg(&n_slice)?;
@@ -34,9 +35,9 @@ pub fn auth(
     stream.flush()?;
 
     let mut n = Vec::new();
-    stream.read_msg(&mut n);
+    stream.read_msg(&mut n)?;
     let mut e = Vec::new();
-    stream.read_msg(&mut e);
+    stream.read_msg(&mut e)?;
     let dst_pub = Rsa::from_public_components(
         openssl::bn::BigNum::from_slice(n.as_slice())?,
         openssl::bn::BigNum::from_slice(e.as_slice())?,
@@ -60,18 +61,18 @@ pub fn auth(
     let mut msg = [0u8; 1024];
     let mut tmp = [0u8; 1024];
     stream.read_exact(&mut msg)?;
-    own_pri.private_decrypt(&msg, &mut tmp, Padding::PKCS1);
+    own_pri.private_decrypt(&msg, &mut tmp, Padding::PKCS1)?;
     for i in 0..1024 {
         if tmp[i] != org_rnd[i] {
-            stream.write(&[1u8; 1]);
+            stream.write(&[1u8; 1])?;
             return Err(Error::new(ErrorKind::Other, "Authentication failed"));
         }
     }
 
-    stream.write(&[0u8; 1]);
+    stream.write(&[0u8; 1])?;
 
     let mut msg = [0u8; 1];
-    stream.read(&mut msg);
+    stream.read(&mut msg)?;
     if msg[0] != 0 {
         return Err(Error::new(ErrorKind::Other, "Authentication failed"));
     }

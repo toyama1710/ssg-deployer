@@ -1,7 +1,10 @@
 use clap::{self, App, Arg};
+use std::fs::File;
+use std::io;
+use std::path::Path;
 
 // return (section, hostname, port, keyfile, publish_dir)
-pub fn get_config() -> (String, String, u32, File, String) {
+pub fn get_config() -> (String, String, u32, String) {
     let args = App::new("ssg-deployer(client)")
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
@@ -25,15 +28,6 @@ pub fn get_config() -> (String, String, u32, File, String) {
                         }
                     }
                 }),
-            Arg::from_usage("[identity file] -i --identity <FILE> 'sets identity file to use'")
-                .validator(|s| {
-                    let p = Path::new(std::ffi::OsStr::new(&s));
-                    if p.exists() && p.is_file() {
-                        Ok(())
-                    } else {
-                        Err(String::from("file not found"))
-                    }
-                }),
             Arg::from_usage("[publish_dir] -s <PUBLISH_DIR> 'assign publish directory").validator(
                 |s| {
                     let p = Path::new(std::ffi::OsStr::new(&s));
@@ -50,16 +44,11 @@ pub fn get_config() -> (String, String, u32, File, String) {
     let section = String::from(args.value_of("section").unwrap());
     let host = String::from(args.value_of("hostname").unwrap());
     let port = args.value_of("port").unwrap().parse::<u32>().unwrap();
-    let path = args
-        .value_of("identity file")
-        .unwrap()
-        .to_owned()
-        .to_string();
-    let key = File::open(path).unwrap();
     let dir = String::from(args.value_of("publish_dir").unwrap());
-    return (section, host, port, key, dir);
+    return (section, host, port, dir);
 }
 
+/*
 pub fn visit_dir(dir: &Path) -> io::Result<()> {
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
@@ -74,3 +63,5 @@ pub fn visit_dir(dir: &Path) -> io::Result<()> {
     }
     Ok(())
 }
+
+*/

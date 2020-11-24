@@ -27,7 +27,7 @@ impl PlainRW for TcpStream {
         block: &mut std::vec::Vec<u8>,
     ) -> std::result::Result<usize, std::io::Error> {
         let mut sz = 0u64;
-        for i in 0..8 {
+        for _ in 0..8 {
             let mut buf = [0u8; 1];
             self.read_exact(&mut buf)?;
             sz <<= 8;
@@ -35,7 +35,7 @@ impl PlainRW for TcpStream {
         }
         block.clear();
         block.resize(sz as usize, 0);
-        self.read_exact(&mut block.as_slice())?;
+        self.read_exact(block.as_mut_slice())?;
 
         return Ok(block.len());
     }

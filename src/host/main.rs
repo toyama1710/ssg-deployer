@@ -1,4 +1,7 @@
 mod dephs;
+use deployer::tcp_wrap::*;
+use deployer::util;
+use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::net::*;
 
@@ -8,17 +11,20 @@ fn main() {
     let listner = TcpListener::bind(addr).unwrap();
 
     for stream in listner.incoming() {
-        let stream = stream.unwrap();
-        let mut reader = BufReader::new(&stream);
-        let mut writer = BufWriter::new(&stream);
-        let mut msg = String::new();
+        let mut stream = stream.unwrap();
 
-        reader.read_line(&mut msg).unwrap();
-        msg = msg.trim().to_owned();
         println!("connection established");
-        println!("{}", msg);
-        writer.write(format!("{} a\n", msg).as_bytes()).unwrap();
-        writer.write(format!("{} b\n", msg).as_bytes()).unwrap();
-        writer.flush().unwrap();
+
+        let mut own_pub = File::open("/home/yamato/.ssh/id_blog_host.pem.pub").unwrap();
+        let mut own_pri = File::open("/home/yamato/.ssh/id_blog_host.pem").unwrap();
+        let mut dst_pri = File::open("/home/yamato/.ssh/id_blog.pem").unwrap();
+
+        let mut msg = Vec::new();
+        stream.read_msg(&mut msg).unwrap();
+
+        if let Err(e) = util::auth(&mut stream, &mut own_pub, &mut own_pri, &mut dst_pri) {
+            println!("{:?}", e);
+            continue;
+        }
     }
 }

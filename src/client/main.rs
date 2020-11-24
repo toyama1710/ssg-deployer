@@ -1,5 +1,6 @@
 use deployer::tcp_wrap::*;
-use std::fs;
+use deployer::util;
+use std::fs::File;
 use std::io::*;
 use std::net::*;
 use std::path::Path;
@@ -7,10 +8,14 @@ use std::time::Duration;
 mod depcl;
 
 fn main() {
-    let (section, host, port, mut key, dir) = depcl::get_config();
+    let (section, host, port, dir) = depcl::get_config();
     let dir = Path::new(&dir);
     let addr = format!("{}:{}", host, port);
     let addr = addr.to_socket_addrs();
+
+    let mut own_pub = File::open("/home/yamato/.ssh/id_blog.pem.pub").unwrap();
+    let mut own_pri = File::open("/home/yamato/.ssh/id_blog.pem").unwrap();
+    let mut dst_pri = File::open("/home/yamato/.ssh/id_blog_host.pem").unwrap();
 
     if let Err(e) = addr {
         eprintln!("can't resolve host");
@@ -25,20 +30,18 @@ fn main() {
         }
         Ok(mut stream) => {
             stream
-                .set_read_timeout(Some(Duration::from_millis(3000)))
+                .set_read_timeout(Some(Duration::from_millis(5000)))
                 .unwrap();
             stream
-                .set_write_timeout(Some(Duration::from_millis(3000)))
+                .set_write_timeout(Some(Duration::from_millis(5000)))
                 .unwrap();
 
-            stream.write(section.as_bytes()).unwrap();
+            stream.write_msg(&Vec::from(section.as_bytes())).unwrap();
             stream.flush().unwrap();
 
-            /*
-            if let Err(e) = depcl::auth(&stream, &key) {
+            if let Err(e) = util::auth(&mut stream, &mut own_pub, &mut own_pri, &mut dst_pri) {
                 panic!("{:?}", e);
             }
-            */
 
             /*
             if let Err(e) = auth() {
