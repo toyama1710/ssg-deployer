@@ -2,25 +2,42 @@ use openssl::symm::*;
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
 
-pub trait ReadTcp {
-    // buf.back() == ch
-    fn read_until(&mut self, ch: u8, buf: &mut Vec<u8>) -> io::Result<usize>;
+pub trait PlainRW {
+    fn read_msg(&mut self, block: &mut Vec<u8>) -> io::Result<usize>;
+    fn write_msg(&mut self, block: &Vec<u8>) -> io::Result<usize>;
 }
 
-impl ReadTcp for TcpStream {
-    fn read_until(&mut self, ch: u8, buf: &mut std::vec::Vec<u8>) -> io::Result<usize> {
-        buf.clear();
-        let mut byte = [0u8; 1];
+impl PlainRW for TcpStream {
+    fn write_msg(&mut self, block: &Vec<u8>) -> std::result::Result<usize, std::io::Error> {
+        let mut sz = block.len() as u64;
+        let mut buf = [0u8; 8];
 
-        loop {
-            self.read_exact(&mut byte)?;
-            buf.push(byte[0]);
-            if byte[0] == ch {
-                break;
-            }
+        for i in (0..8).rev() {
+            buf[i] = (sz & 0xff) as u8;
+            sz >>= 8;
         }
 
-        return Ok(buf.len());
+        self.write(&buf)?;
+        self.write(block.as_slice())?;
+
+        return Ok(block.len());
+    }
+    fn read_msg(
+        &mut self,
+        block: &mut std::vec::Vec<u8>,
+    ) -> std::result::Result<usize, std::io::Error> {
+        let mut sz = 0u64;
+        for i in 0..8 {
+            let mut buf = [0u8; 1];
+            self.read_exact(&mut buf)?;
+            sz <<= 8;
+            sz |= buf[0] as u64;
+        }
+        block.clear();
+        block.resize(sz as usize, 0);
+        self.read_exact(&mut block.as_slice())?;
+
+        return Ok(block.len());
     }
 }
 
@@ -72,7 +89,6 @@ impl AesWrap for TcpStream {
 
         self.write(head.as_slice())?;
         self.write(msg.as_slice())?;
-        self.flush()?;
         return Ok(msg.len());
     }
 }
