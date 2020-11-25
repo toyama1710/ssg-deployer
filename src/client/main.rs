@@ -1,6 +1,5 @@
 use deployer::tcp_wrap::*;
 use deployer::util;
-use std::fs::File;
 use std::io::*;
 use std::net::*;
 use std::path::Path;
@@ -9,7 +8,7 @@ mod depcl;
 
 fn main() {
     let (section, host, port, dir) = depcl::get_config();
-    let dir = Path::new(&dir);
+    let _dir = Path::new(&dir);
     let addr = format!("{}:{}", host, port);
     let addr = addr.to_socket_addrs();
 

@@ -1,6 +1,4 @@
 use clap::{self, App, Arg};
-use std::fs::File;
-use std::io;
 use std::path::Path;
 
 // return (section, hostname, port, keyfile, publish_dir)
