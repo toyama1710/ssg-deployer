@@ -4,6 +4,7 @@ use deployer::util;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::net::*;
+use std::path::Path;
 
 fn main() {
     let p = dephs::get_config();
@@ -15,14 +16,14 @@ fn main() {
 
         println!("connection established");
 
-        let mut own_pub = File::open("/home/yamato/.ssh/id_blog_host.pem.pub").unwrap();
-        let mut own_pri = File::open("/home/yamato/.ssh/id_blog_host.pem").unwrap();
-        let mut dst_pri = File::open("/home/yamato/.ssh/id_blog.pem").unwrap();
+        let own_pub = Path::new("/home/yamato/.ssh/id_blog_host.pem.pub");
+        let own_pri = Path::new("/home/yamato/.ssh/id_blog_host.pem");
+        let dst_pub = Path::new("/home/yamato/.ssh/id_blog.pem.pub");
 
         let mut msg = Vec::new();
         stream.read_msg(&mut msg).unwrap();
 
-        if let Err(e) = util::auth(&mut stream, &mut own_pub, &mut own_pri, &mut dst_pri) {
+        if let Err(e) = util::auth(&mut stream, &own_pub, &own_pri, &dst_pub) {
             println!("{:?}", e);
             continue;
         }

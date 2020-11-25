@@ -13,14 +13,13 @@ fn main() {
     let addr = format!("{}:{}", host, port);
     let addr = addr.to_socket_addrs();
 
-    let mut own_pub = File::open("/home/yamato/.ssh/id_blog.pem.pub").unwrap();
-    let mut own_pri = File::open("/home/yamato/.ssh/id_blog.pem").unwrap();
-    let mut dst_pri = File::open("/home/yamato/.ssh/id_blog_host.pem").unwrap();
+    let own_pub = Path::new("/home/yamato/.ssh/id_blog.pem.pub");
+    let own_pri = Path::new("/home/yamato/.ssh/id_blog.pem");
+    let dst_pub = Path::new("/home/yamato/.ssh/id_blog_host.pem.pub");
 
     if let Err(e) = addr {
         eprintln!("can't resolve host");
-        eprintln!("{:?}", e);
-        return;
+        panic!("{:?}", e);
     }
 
     let addr = addr.unwrap().find(|x| (*x).is_ipv4()).unwrap();
@@ -39,7 +38,8 @@ fn main() {
             stream.write_msg(&Vec::from(section.as_bytes())).unwrap();
             stream.flush().unwrap();
 
-            if let Err(e) = util::auth(&mut stream, &mut own_pub, &mut own_pri, &mut dst_pri) {
+            if let Err(e) = util::auth(&mut stream, &own_pub, &own_pri, &dst_pub) {
+                eprintln!("authentication failed");
                 panic!("{:?}", e);
             }
 
