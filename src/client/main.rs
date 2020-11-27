@@ -41,7 +41,8 @@ fn main() {
                 .set_write_timeout(Some(Duration::from_millis(5000)))
                 .unwrap();
 
-            stream.write_msg(&section.user.as_bytes());
+            stream.write_msg(&section.user.as_bytes()).unwrap();
+            stream.flush().unwrap();
             if let Err(e) = util::auth(&mut stream, &section.own_pri, &section.host_pub) {
                 eprintln!("authentication failed");
                 eprintln!("{:?}", e);
