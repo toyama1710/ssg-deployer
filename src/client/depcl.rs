@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Config {
     pub name: String,
-    pub hostname: String,
+    pub user: String,
+    pub host: String,
     pub port: u32,
     pub publish_dir: PathBuf,
     pub own_pri: PathBuf,

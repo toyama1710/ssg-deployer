@@ -1,4 +1,4 @@
-use deployer::tcp_wrap::Aes256cbcWrap;
+use deployer::tcp_wrap::*;
 use deployer::util;
 use std::io::*;
 use std::net::*;
@@ -12,7 +12,7 @@ fn main() {
         panic!();
     }
     let section = conf.unwrap();
-    let addr = format!("{}:{}", section.hostname, section.port);
+    let addr = format!("{}:{}", section.host, section.port);
     let addr = addr.to_socket_addrs();
 
     println!(
@@ -41,6 +41,7 @@ fn main() {
                 .set_write_timeout(Some(Duration::from_millis(5000)))
                 .unwrap();
 
+            stream.write_msg(&section.user.as_bytes());
             if let Err(e) = util::auth(&mut stream, &section.own_pri, &section.host_pub) {
                 eprintln!("authentication failed");
                 eprintln!("{:?}", e);

@@ -5,11 +5,11 @@ use std::net::TcpStream;
 
 pub trait PlainRW {
     fn read_msg(&mut self, block: &mut Vec<u8>) -> io::Result<usize>;
-    fn write_msg(&mut self, block: &Vec<u8>) -> io::Result<usize>;
+    fn write_msg(&mut self, block: &[u8]) -> io::Result<usize>;
 }
 
 impl PlainRW for TcpStream {
-    fn write_msg(&mut self, block: &Vec<u8>) -> std::result::Result<usize, std::io::Error> {
+    fn write_msg(&mut self, block: &[u8]) -> std::result::Result<usize, std::io::Error> {
         let mut sz = block.len() as u64;
         let mut buf = [0u8; 8];
 
@@ -19,7 +19,7 @@ impl PlainRW for TcpStream {
         }
 
         self.write(&buf)?;
-        self.write(block.as_slice())?;
+        self.write(block)?;
 
         return Ok(block.len());
     }
