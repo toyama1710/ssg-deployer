@@ -1,9 +1,9 @@
 use openssl::pkey::{Private, Public};
 use openssl::rsa::{Padding, Rsa};
+use openssl::sha::sha256;
 use openssl::symm::*;
 use rand::Rng;
-use serde::{Deserialize, Serialize};
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::io::{Error, ErrorKind};
 use std::net::TcpStream;
@@ -109,4 +109,22 @@ pub fn exchange_aes_key(
         .collect();
 
     return Ok(aes_key);
+}
+
+pub fn calc_hash(path: &Path) -> io::Result<Vec<(PathBuf, [u8; 32])>> {
+    let mut ret = Vec::new();
+    if path.is_dir() {
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let path = entry.path();
+            ret.append(&mut calc_hash(&path)?);
+        }
+        return Ok(ret);
+    } else {
+        let mut buf = Vec::new();
+        let mut file = File::open(path)?;
+        file.read_to_end(&mut buf)?;
+        ret.push((path.to_path_buf(), sha256(&buf)));
+        return Ok(ret);
+    }
 }

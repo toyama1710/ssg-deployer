@@ -64,21 +64,3 @@ pub fn get_config() -> io::Result<Config> {
 
     return Ok(conf_array[0].clone());
 }
-
-pub fn calc_hash(path: &Path) -> io::Result<Vec<(PathBuf, [u8; 32])>> {
-    let mut ret = Vec::new();
-    if path.is_dir() {
-        for entry in fs::read_dir(path)? {
-            let entry = entry?;
-            let path = entry.path();
-            ret.append(&mut calc_hash(&path)?);
-        }
-        return Ok(ret);
-    } else {
-        let mut buf = Vec::new();
-        let mut file = File::open(path)?;
-        file.read_to_end(&mut buf)?;
-        ret.push((path.to_path_buf(), sha256(&buf)));
-        return Ok(ret);
-    }
-}

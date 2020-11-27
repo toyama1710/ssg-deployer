@@ -66,11 +66,11 @@ fn main() {
                 .unwrap();
             stream.flush().unwrap();
 
-            let hashes = depcl::calc_hash(&section.publish_dir).unwrap();
+            let hashes = util::calc_hash(&section.publish_dir).unwrap();
 
             for v in hashes.iter() {
                 let p = v.0.strip_prefix(&section.publish_dir).unwrap();
-                println!("{}", p.display());
+                println!("found: {}", p.display());
                 stream
                     .write_aes(&aes_key, p.to_str().unwrap().as_bytes())
                     .unwrap();
