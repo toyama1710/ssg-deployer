@@ -9,6 +9,11 @@ use std::path::{Component, PathBuf};
 pub struct SectionTable {
     pub name: String,
     pub publish_dir: PathBuf,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct AuthTable {
+    pub user: String,
     pub client_pub: PathBuf,
     pub own_pri: PathBuf,
 }
@@ -17,10 +22,11 @@ pub struct SectionTable {
 struct ConfigToml {
     port: Option<u32>,
     section: Vec<SectionTable>,
+    authorized_client: Vec<AuthTable>,
 }
 
 // return listen port
-pub fn get_config() -> io::Result<(u32, Vec<SectionTable>)> {
+pub fn get_config() -> io::Result<(u32, Vec<SectionTable>, Vec<AuthTable>)> {
     let mut conf_path = PathBuf::from(Component::RootDir.as_os_str());
     conf_path.push("etc");
     conf_path.push("ssg-deployer");
@@ -73,7 +79,7 @@ pub fn get_config() -> io::Result<(u32, Vec<SectionTable>)> {
     }
 
     // conf_toml validation
-    for item in &conf_toml.section {
+    for item in &conf_toml.authorized_client {
         if !item.client_pub.is_file() {
             return Err(Error::new(ErrorKind::NotFound, "client_pub is not exists"));
         }
@@ -93,10 +99,10 @@ pub fn get_config() -> io::Result<(u32, Vec<SectionTable>)> {
         if cnt > 1 {
             return Err(Error::new(
                 ErrorKind::Other,
-                format!("{} found more than one", t.name),
+                format!("section {} found more than one", t.name),
             ));
         }
     }
 
-    return Ok((p.unwrap(), conf_toml.section));
+    return Ok((p.unwrap(), conf_toml.section, conf_toml.authorized_client));
 }
