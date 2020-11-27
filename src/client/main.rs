@@ -6,7 +6,12 @@ use std::time::Duration;
 mod depcl;
 
 fn main() {
-    let section = depcl::get_config().unwrap();
+    let conf = depcl::get_config();
+    if let Err(e) = conf {
+        eprintln!("{:?}", e);
+        panic!();
+    }
+    let section = conf.unwrap();
     let addr = format!("{}:{}", section.hostname, section.port);
     let addr = addr.to_socket_addrs();
 
@@ -15,13 +20,15 @@ fn main() {
 
     if let Err(e) = addr {
         eprintln!("can't resolve host");
-        panic!("{:?}", e);
+        eprintln!("{:?}", e);
+        panic!();
     }
 
     let addr = addr.unwrap().find(|x| (*x).is_ipv4()).unwrap();
     match TcpStream::connect_timeout(&addr, Duration::from_millis(2000)) {
         Err(e) => {
-            panic!("{:?}", e);
+            eprintln!("{:?}", e);
+            panic!();
         }
         Ok(mut stream) => {
             stream
@@ -38,14 +45,16 @@ fn main() {
 
             if let Err(e) = util::auth(&mut stream, &own_pri, &dst_pub) {
                 eprintln!("authentication failed");
-                panic!("{:?}", e);
+                eprintln!("{:?}", e);
+                panic!();
             }
 
             let aes_key;
             match util::exchange_aes_key(&mut stream, &own_pri, &dst_pub) {
                 Err(e) => {
-                    eprintln!("authentication failed");
-                    panic!("{:?}", e);
+                    eprintln!("failed to exchange AES KEY");
+                    eprintln!("{:?}", e);
+                    panic!();
                 }
                 Ok(v) => {
                     aes_key = v;

@@ -4,7 +4,13 @@ use deployer::util;
 use std::net::*;
 
 fn main() {
-    let (p, sections) = dephs::get_config().unwrap();
+    let conf = dephs::get_config();
+    if let Err(e) = conf {
+        eprintln!("{:?}", e);
+        panic!();
+    }
+    let (p, sections) = conf.unwrap();
+
     let addr = format!("0.0.0.0:{}", p);
     let listner = TcpListener::bind(addr).unwrap();
 
@@ -26,14 +32,16 @@ fn main() {
 
         if let Err(e) = util::auth(&mut stream, &sec.own_pri, &sec.client_pub) {
             eprintln!("authentication failed");
-            panic!("{:?}", e);
+            eprintln!("{:?}", e);
+            panic!();
         }
 
         let aes_key;
         match util::exchange_aes_key(&mut stream, &sec.own_pri, &sec.client_pub) {
             Err(e) => {
-                eprintln!("authentication failed");
-                panic!("{:?}", e);
+                eprintln!("failed to exchange AES key");
+                eprintln!("{:?}", e);
+                panic!();
             }
             Ok(v) => {
                 aes_key = v;
