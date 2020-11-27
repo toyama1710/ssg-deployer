@@ -7,14 +7,12 @@ use std::time::Duration;
 mod depcl;
 
 fn main() {
-    let (section, host, port, dir) = depcl::get_config();
-    let _dir = Path::new(&dir);
-    let addr = format!("{}:{}", host, port);
+    let section = depcl::get_config().unwrap();
+    let addr = format!("{}:{}", section.hostname, section.port);
     let addr = addr.to_socket_addrs();
 
-    let own_pub = Path::new("/home/yamato/.ssh/id_blog.pem.pub");
-    let own_pri = Path::new("/home/yamato/.ssh/id_blog.pem");
-    let dst_pub = Path::new("/home/yamato/.ssh/id_blog_host.pem.pub");
+    let own_pri = section.own_pri;
+    let dst_pub = section.host_pub;
 
     if let Err(e) = addr {
         eprintln!("can't resolve host");
@@ -34,20 +32,26 @@ fn main() {
                 .set_write_timeout(Some(Duration::from_millis(5000)))
                 .unwrap();
 
-            stream.write_msg(&Vec::from(section.as_bytes())).unwrap();
+            stream
+                .write_msg(&Vec::from(section.name.as_bytes()))
+                .unwrap();
             stream.flush().unwrap();
 
-            if let Err(e) = util::auth(&mut stream, &own_pub, &own_pri, &dst_pub) {
+            if let Err(e) = util::auth(&mut stream, &own_pri, &dst_pub) {
                 eprintln!("authentication failed");
                 panic!("{:?}", e);
             }
 
-            /*
-            if let Err(e) = auth() {
-                eprintln!("{:?}", e);
-                return Err(e);
+            let aes_key;
+            match util::exchange_aes_key(&mut stream, &own_pri, &dst_pub) {
+                Err(e) => {
+                    eprintln!("authentication failed");
+                    panic!("{:?}", e);
+                }
+                Ok(v) => {
+                    aes_key = v;
+                }
             }
-            */
 
             // send_hashs()
             /*

@@ -1,49 +1,66 @@
 use clap::{self, App, Arg};
-use std::path::Path;
+use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::{self, Error, ErrorKind, Read};
+use std::path::{Path, PathBuf};
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct Config {
+    pub name: String,
+    pub hostname: String,
+    pub port: u32,
+    pub publish_dir: PathBuf,
+    pub own_pri: PathBuf,
+    pub host_pub: PathBuf,
+}
+type SectionTable = Config;
+
+#[derive(Deserialize, Serialize, Debug)]
+struct ConfigArray {
+    section: Vec<SectionTable>,
+}
 
 // return (section, hostname, port, keyfile, publish_dir)
-pub fn get_config() -> (String, String, u32, String) {
+pub fn get_config() -> io::Result<Config> {
+    let mut conf_path = dirs::config_dir().unwrap();
+    conf_path.push("ssg-deployer");
+    conf_path.push("config.toml");
+    let conf_path: PathBuf = conf_path.iter().collect();
+
     let args = App::new("ssg-deployer(client)")
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
         .about("simple deployer")
-        .args(&[
-            Arg::from_usage("[section]<SECTION>"),
-            Arg::from_usage("[hostname] -d <HOST> 'assign destination'"),
-            Arg::from_usage("[port] -p --port <INTEGER> 'sets port number to send request'")
-                .validator(|s| {
-                    let v = s.parse::<usize>();
-                    match v {
-                        Ok(v) => {
-                            if 1024 <= v && v <= 49512 {
-                                return Ok(());
-                            } else {
-                                return Err(String::from("port number must be 1024..=49512"));
-                            }
-                        }
-                        Err(_) => {
-                            return Err(String::from("-p value must be integer"));
-                        }
-                    }
-                }),
-            Arg::from_usage("[publish_dir] -s <PUBLISH_DIR> 'assign publish directory").validator(
-                |s| {
-                    let p = Path::new(std::ffi::OsStr::new(&s));
-                    if p.exists() && p.is_dir() {
-                        Ok(())
-                    } else {
-                        Err(String::from("missing path"))
-                    }
-                },
-            ),
-        ])
+        .args(&[Arg::from_usage("<section> <SECTION>")])
+        .after_help(&*format!("config file is {:?}", conf_path))
         .get_matches();
 
     let section = String::from(args.value_of("section").unwrap());
-    let host = String::from(args.value_of("hostname").unwrap());
-    let port = args.value_of("port").unwrap().parse::<u32>().unwrap();
-    let dir = String::from(args.value_of("publish_dir").unwrap());
-    return (section, host, port, dir);
+
+    let mut buf = Vec::new();
+    let mut conf_file = File::open(conf_path)?;
+    conf_file.read_to_end(&mut buf)?;
+    let conf_array: ConfigArray = toml::from_slice(&buf)?;
+    let conf_array: Vec<Config> = conf_array
+        .section
+        .iter()
+        .filter(|&v| if *v.name == section { true } else { false })
+        .cloned()
+        .collect();
+
+    if conf_array.len() > 1 {
+        return Err(Error::new(
+            ErrorKind::Other,
+            "specified section are found, but there are more than one",
+        ));
+    } else if conf_array.is_empty() {
+        return Err(Error::new(
+            ErrorKind::Other,
+            "specified section is not found",
+        ));
+    }
+
+    return Ok(conf_array[0].clone());
 }
 
 /*
@@ -61,5 +78,4 @@ pub fn visit_dir(dir: &Path) -> io::Result<()> {
     }
     Ok(())
 }
-
 */

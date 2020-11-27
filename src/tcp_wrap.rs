@@ -1,3 +1,4 @@
+use crate::util;
 use openssl::symm::*;
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
@@ -41,40 +42,40 @@ impl PlainRW for TcpStream {
     }
 }
 
-pub trait AesWrap {
+pub trait AesWrap256 {
     fn read_aes(&mut self, key: &[u8], block: &mut Vec<u8>) -> io::Result<usize>;
-    fn write_aes(&mut self, key: &[u8], iv: &[u8], block: &mut Vec<u8>) -> io::Result<usize>;
+    fn write_aes(&mut self, key: &[u8], block: &mut Vec<u8>) -> io::Result<usize>;
 }
 
-impl AesWrap for TcpStream {
+impl AesWrap256 for TcpStream {
     fn read_aes(&mut self, key: &[u8], block: &mut Vec<u8>) -> io::Result<usize> {
+        let iv_len = Cipher::aes_256_cbc().iv_len().unwrap();
+
         let mut buf = vec![0u8; 32];
-        self.read_exact(buf.as_mut_slice())?;
-        let buf = decrypt(Cipher::aes_256_cbc(), key, Some(&[0; 16]), buf.as_slice()).unwrap();
-        let buf = buf.split_at(16).1;
+        self.read_exact(&mut buf)?;
+        let buf = decrypt(Cipher::aes_256_cbc(), key, Some(&vec![0; iv_len]), &buf).unwrap();
+        let buf = buf.split_at(iv_len).1;
         let mut sz = 0usize;
         for v in buf {
             sz <<= 8;
             sz |= *v as usize;
         }
 
-        let mut buf = vec![0u8; sz + 16];
-        self.read_exact(buf.as_mut_slice())?;
-        let buf = decrypt(Cipher::aes_256_cbc(), key, Some(&[0; 16]), buf.as_slice()).unwrap();
-        block.clear();
-        block.resize(sz, 0);
+        let mut buf = vec![0u8; sz];
+        self.read_exact(&mut buf)?;
+        let buf = decrypt(Cipher::aes_256_cbc(), key, Some(&vec![0; iv_len]), &buf).unwrap();
 
-        for i in 16..sz {
-            block[i - 16] = buf[i];
-        }
+        *block = Vec::from(buf.split_at(iv_len).1);
 
-        return Ok(sz);
+        return Ok(block.len());
     }
-    fn write_aes(&mut self, key: &[u8], iv: &[u8], block: &mut Vec<u8>) -> io::Result<usize> {
+    fn write_aes(&mut self, key: &[u8], block: &mut Vec<u8>) -> io::Result<usize> {
+        let iv_len = Cipher::aes_256_cbc().iv_len().unwrap();
         block.reverse();
-        block.append(&mut vec![0; 16]);
+        block.append(&mut vec![0; iv_len]);
         block.reverse();
-        let msg = encrypt(Cipher::aes_256_cbc(), key, Some(iv), block.as_slice()).unwrap();
+        let iv = util::get_rnd_vec(iv_len);
+        let msg = encrypt(Cipher::aes_256_cbc(), key, Some(&iv), &block).unwrap();
 
         let mut sz = msg.len() as u64;
         let mut head = Vec::new();
@@ -82,10 +83,10 @@ impl AesWrap for TcpStream {
             head.push((sz & 0xff) as u8);
             sz >>= 8;
         }
-        head.append(&mut vec![0; 16]);
+        head.append(&mut vec![0; iv_len]);
         head.reverse();
 
-        let head = encrypt(Cipher::aes_256_cbc(), key, Some(iv), head.as_slice()).unwrap();
+        let head = encrypt(Cipher::aes_256_cbc(), key, Some(&iv), &head).unwrap();
 
         self.write(head.as_slice())?;
         self.write(msg.as_slice())?;

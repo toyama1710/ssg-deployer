@@ -1,6 +1,7 @@
 mod dephs;
 use deployer::tcp_wrap::*;
 use deployer::util;
+use std::io::Write;
 use std::net::*;
 use std::path::Path;
 
@@ -14,16 +15,26 @@ fn main() {
 
         println!("connection established");
 
-        let own_pub = Path::new("/home/yamato/.ssh/id_blog_host.pem.pub");
         let own_pri = Path::new("/home/yamato/.ssh/id_blog_host.pem");
         let dst_pub = Path::new("/home/yamato/.ssh/id_blog.pem.pub");
 
         let mut msg = Vec::new();
         stream.read_msg(&mut msg).unwrap();
 
-        if let Err(e) = util::auth(&mut stream, &own_pub, &own_pri, &dst_pub) {
-            println!("{:?}", e);
-            continue;
+        if let Err(e) = util::auth(&mut stream, &own_pri, &dst_pub) {
+            eprintln!("authentication failed");
+            panic!("{:?}", e);
+        }
+
+        let aes_key;
+        match util::exchange_aes_key(&mut stream, &own_pri, &dst_pub) {
+            Err(e) => {
+                eprintln!("authentication failed");
+                panic!("{:?}", e);
+            }
+            Ok(v) => {
+                aes_key = v;
+            }
         }
     }
 }
