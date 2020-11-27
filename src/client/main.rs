@@ -2,7 +2,6 @@ use deployer::tcp_wrap::*;
 use deployer::util;
 use std::io::*;
 use std::net::*;
-use std::path::Path;
 use std::time::Duration;
 mod depcl;
 

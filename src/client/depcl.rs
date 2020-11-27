@@ -2,7 +2,7 @@ use clap::{self, App, Arg};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{self, Error, ErrorKind, Read};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Config {
