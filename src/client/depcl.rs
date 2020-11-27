@@ -1,8 +1,9 @@
 use clap::{self, App, Arg};
+use openssl::sha::sha256;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, Error, ErrorKind, Read};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Config {
@@ -63,19 +64,20 @@ pub fn get_config() -> io::Result<Config> {
     return Ok(conf_array[0].clone());
 }
 
-/*
-pub fn visit_dir(dir: &Path) -> io::Result<()> {
-    if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
+pub fn calc_hash(path: &Path) -> io::Result<Vec<(PathBuf, [u8; 32])>> {
+    let mut ret = Vec::new();
+    if path.is_dir() {
+        for entry in fs::read_dir(path)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_dir() {
-                visit_dir(&path)?;
-            } else {
-                println!("{}", path.display());
-            }
+            ret.append(&mut calc_hash(&path)?);
         }
+        return Ok(ret);
+    } else {
+        let mut buf = Vec::new();
+        let mut file = File::open(path)?;
+        file.read_to_end(&mut buf)?;
+        ret.push((path.to_path_buf(), sha256(&buf)));
+        return Ok(ret);
     }
-    Ok(())
 }
-*/

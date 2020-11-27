@@ -42,12 +42,12 @@ impl PlainRW for TcpStream {
     }
 }
 
-pub trait AesWrap256 {
+pub trait Aes256cbcWrap {
     fn read_aes(&mut self, key: &[u8], block: &mut Vec<u8>) -> io::Result<usize>;
-    fn write_aes(&mut self, key: &[u8], block: &mut Vec<u8>) -> io::Result<usize>;
+    fn write_aes(&mut self, key: &[u8], block: &[u8]) -> io::Result<usize>;
 }
 
-impl AesWrap256 for TcpStream {
+impl Aes256cbcWrap for TcpStream {
     fn read_aes(&mut self, key: &[u8], block: &mut Vec<u8>) -> io::Result<usize> {
         let iv_len = Cipher::aes_256_cbc().iv_len().unwrap();
 
@@ -69,8 +69,9 @@ impl AesWrap256 for TcpStream {
 
         return Ok(block.len());
     }
-    fn write_aes(&mut self, key: &[u8], block: &mut Vec<u8>) -> io::Result<usize> {
+    fn write_aes(&mut self, key: &[u8], block: &[u8]) -> io::Result<usize> {
         let iv_len = Cipher::aes_256_cbc().iv_len().unwrap();
+        let mut block = Vec::from(block);
         block.reverse();
         block.append(&mut vec![0; iv_len]);
         block.reverse();

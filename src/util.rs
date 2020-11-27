@@ -2,11 +2,12 @@ use openssl::pkey::{Private, Public};
 use openssl::rsa::{Padding, Rsa};
 use openssl::symm::*;
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::io::{Error, ErrorKind};
 use std::net::TcpStream;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub fn get_rnd_vec(s: usize) -> Vec<u8> {
     let mut rng = rand::thread_rng();
@@ -16,7 +17,6 @@ pub fn get_rnd_vec(s: usize) -> Vec<u8> {
 const RSA_KEY_BIT: usize = 4096;
 const RSA_KEY_BYTE: usize = RSA_KEY_BIT / 8;
 const RSA_PLAIN_MAX: usize = RSA_KEY_BYTE - 16;
-
 // authentication succeed -> return aes_key
 //                failed  -> retrun Err
 pub fn auth(stream: &mut TcpStream, own_pri: &Path, dst_pub: &Path) -> io::Result<()> {
