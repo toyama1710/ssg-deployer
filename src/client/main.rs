@@ -1,7 +1,9 @@
 use deployer::tcp_wrap::*;
 use deployer::util;
+use std::fs::File;
 use std::io::*;
 use std::net::*;
+use std::path::Path;
 use std::time::Duration;
 mod depcl;
 
@@ -14,12 +16,6 @@ fn main() {
     let section = conf.unwrap();
     let addr = format!("{}:{}", section.host, section.port);
     let addr = addr.to_socket_addrs();
-
-    println!(
-        "{} {}",
-        section.host_pub.display(),
-        section.own_pri.display()
-    );
 
     if let Err(e) = addr {
         eprintln!("can't resolve host");
@@ -68,31 +64,8 @@ fn main() {
 
             let hashes = util::calc_hash(&section.publish_dir).unwrap();
 
-            for v in hashes.iter() {
-                let p = v.0.strip_prefix(&section.publish_dir).unwrap();
-                println!("found: {}", p.display());
-                stream
-                    .write_aes(&aes_key, p.to_str().unwrap().as_bytes())
-                    .unwrap();
-                stream.write_aes(&aes_key, &mut Vec::from(v.1)).unwrap();
-            }
-
-            stream.write_aes(&aes_key, b";sended").unwrap();
+            depcl::send_hash(&mut stream, &aes_key, &section.publish_dir, &hashes).unwrap();
             stream.flush().unwrap();
-
-            // send_files()
-            /*
-                loop {
-                    reader.read_line(&mut msg);
-                    if msg != "end." {
-                        send_file();
-                    }
-                }
-            */
-
-            /*
-                writer.write("all file sended\n")
-            */
         }
     }
 }

@@ -1,8 +1,9 @@
 use clap::{self, App, Arg};
-use openssl::sha::sha256;
+use deployer::tcp_wrap::Aes256cbcWrap;
 use serde::{Deserialize, Serialize};
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, Error, ErrorKind, Read};
+use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -63,4 +64,21 @@ pub fn get_config() -> io::Result<Config> {
     }
 
     return Ok(conf_array[0].clone());
+}
+
+pub fn send_hash(
+    stream: &mut TcpStream,
+    aes_key: &[u8],
+    pre: &Path,
+    hashes: &Vec<(PathBuf, [u8; 32])>,
+) -> io::Result<()> {
+    for v in hashes.iter() {
+        let p = v.0.strip_prefix(&pre).unwrap();
+        stream.write_aes(&aes_key, p.to_str().unwrap().as_bytes())?;
+        stream.write_aes(&aes_key, &mut Vec::from(v.1))?;
+    }
+
+    stream.write_aes(&aes_key, b";send").unwrap();
+
+    return Ok(());
 }
