@@ -78,7 +78,7 @@ pub fn send_hash(
         stream.write_aes(&aes_key, &mut Vec::from(v.1))?;
     }
 
-    stream.write_aes(&aes_key, b";send").unwrap();
+    stream.write_aes(&aes_key, b";hash sended").unwrap();
 
     return Ok(());
 }

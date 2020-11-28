@@ -128,3 +128,33 @@ pub fn calc_hash(path: &Path) -> io::Result<Vec<(PathBuf, [u8; 32])>> {
         return Ok(ret);
     }
 }
+
+pub fn clear_dir(path: &Path) -> io::Result<()> {
+    if path.is_dir() {
+        let p: Vec<PathBuf> = fs::read_dir(path)?
+            .map(|entry| entry.unwrap().path())
+            .collect();
+        if p.is_empty() {
+            std::fs::remove_dir(path)?;
+        } else {
+            for v in p {
+                clear_dir(&v)?;
+            }
+        }
+    }
+    let p: Vec<PathBuf> = fs::read_dir(path)?
+        .map(|entry| entry.unwrap().path())
+        .collect();
+    if p.is_empty() {
+        std::fs::remove_dir(path)?;
+    }
+    return Ok(());
+}
+
+pub fn into_u8_32(vec: &Vec<u8>) -> [u8; 32] {
+    let mut a = [0u8; 32];
+    for i in 0..32 {
+        a[i] = vec[i];
+    }
+    return a;
+}

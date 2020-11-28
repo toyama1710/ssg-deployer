@@ -1,7 +1,10 @@
 mod dephs;
+use deployer::file_shake::rcv_file;
 use deployer::tcp_wrap::*;
 use deployer::util;
+use std::collections::BTreeMap;
 use std::net::*;
+use std::path::PathBuf;
 
 fn main() {
     let conf = dephs::get_config();
@@ -15,6 +18,10 @@ fn main() {
     let listner = TcpListener::bind(addr).unwrap();
 
     for stream in listner.incoming() {
+        if let Err(_e) = stream {
+            continue;
+        }
+
         let mut stream = stream.unwrap();
 
         println!("connection established");
@@ -48,10 +55,58 @@ fn main() {
             }
         }
 
-        let mut sec_name = Vec::new();
-        stream.read_aes(&aes_key, &mut sec_name).unwrap();
-        let sec_name = String::from_utf8_lossy(&sec_name);
+        let mut msg = Vec::new();
+        stream.read_aes(&aes_key, &mut msg).unwrap();
+        let msg = String::from_utf8_lossy(&msg);
 
-        println!("{}", sec_name);
+        let sec_conf = sections.iter().find(|v| v.name == msg);
+        if sec_conf.is_none() {
+            eprintln!("section not found");
+            continue;
+        }
+        let sec_conf = sec_conf.unwrap();
+
+        let h = util::calc_hash(&sec_conf.publish_dir).unwrap();
+        let mut hashes = BTreeMap::<PathBuf, [u8; 32]>::new();
+        for v in h.iter() {
+            let p = v.0.strip_prefix(&sec_conf.publish_dir).unwrap();
+            hashes.insert(p.into(), v.1);
+        }
+
+        let mut req = Vec::new();
+        loop {
+            let mut msg = Vec::new();
+            stream.read_aes(&aes_key, &mut msg).unwrap();
+            let msg = String::from_utf8(msg).unwrap();
+            if msg.starts_with(";hash sended") {
+                break;
+            }
+
+            let path = PathBuf::from(&msg);
+            let mut msg = Vec::new();
+            stream.read_aes(&aes_key, &mut msg).unwrap();
+            let msg = util::into_u8_32(&msg);
+            if !hashes.contains_key(&path) {
+            } else if hashes.get(&path).unwrap() != &msg {
+                hashes.remove(&path);
+                req.push(path);
+            }
+        }
+
+        for p in &req {
+            stream
+                .write_aes(&aes_key, p.to_str().unwrap().as_bytes())
+                .unwrap();
+        }
+        rcv_file(&mut stream, &aes_key, &sec_conf.publish_dir, &req).unwrap();
+
+        for (path, _) in hashes {
+            let path = sec_conf.publish_dir.join(&path);
+            std::fs::remove_file(path).unwrap();
+        }
+
+        util::clear_dir(&sec_conf.publish_dir).unwrap();
+
+        stream.write_aes(&aes_key, b";session end").unwrap();
     }
 }
