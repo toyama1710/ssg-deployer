@@ -1,9 +1,8 @@
+use deployer::file_shake::*;
 use deployer::tcp_wrap::*;
 use deployer::util;
-use std::fs::File;
 use std::io::*;
 use std::net::*;
-use std::path::Path;
 use std::time::Duration;
 mod depcl;
 
@@ -66,6 +65,8 @@ fn main() {
 
             depcl::send_hash(&mut stream, &aes_key, &section.publish_dir, &hashes).unwrap();
             stream.flush().unwrap();
+
+            send_file(&mut stream, &aes_key, &section.publish_dir).unwrap();
         }
     }
 }
