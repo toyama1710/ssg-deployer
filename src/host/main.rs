@@ -3,7 +3,6 @@ use deployer::file_shake::rcv_file;
 use deployer::tcp_wrap::*;
 use deployer::util;
 use std::collections::BTreeMap;
-use std::io::Write;
 use std::net::*;
 use std::path::PathBuf;
 
