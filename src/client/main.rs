@@ -67,6 +67,16 @@ fn main() {
             stream.flush().unwrap();
 
             send_file(&mut stream, &aes_key, &section.publish_dir).unwrap();
+
+            let mut buf = Vec::new();
+            stream.read_aes(&aes_key, &mut buf).unwrap();
+
+            if String::from_utf8_lossy(&buf) == ";session end" {
+                println!("end");
+            } else {
+                eprintln!("file sended but some error occured");
+                panic!();
+            }
         }
     }
 }
