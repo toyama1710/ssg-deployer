@@ -3,6 +3,7 @@ use deployer::file_shake::rcv_file;
 use deployer::tcp_wrap::*;
 use deployer::util;
 use std::collections::BTreeMap;
+use std::io::Write;
 use std::net::*;
 use std::path::PathBuf;
 
@@ -57,7 +58,7 @@ fn main() {
 
         let mut msg = Vec::new();
         stream.read_aes(&aes_key, &mut msg).unwrap();
-        let msg = String::from_utf8_lossy(&msg);
+        let msg = String::from_utf8(msg).unwrap();
 
         let sec_conf = sections.iter().find(|v| v.name == msg);
         if sec_conf.is_none() {
@@ -87,17 +88,17 @@ fn main() {
             stream.read_aes(&aes_key, &mut msg).unwrap();
             let msg = util::into_u8_32(&msg);
             if !hashes.contains_key(&path) {
-            } else if hashes.get(&path).unwrap() != &msg {
-                hashes.remove(&path);
                 req.push(path);
+            } else {
+                if hashes.get(&path).unwrap() != &msg {
+                    hashes.remove(&path);
+                    req.push(path);
+                } else {
+                    hashes.remove(&path);
+                }
             }
         }
 
-        for p in &req {
-            stream
-                .write_aes(&aes_key, p.to_str().unwrap().as_bytes())
-                .unwrap();
-        }
         rcv_file(&mut stream, &aes_key, &sec_conf.publish_dir, &req).unwrap();
 
         for (path, _) in hashes {
@@ -106,7 +107,5 @@ fn main() {
         }
 
         util::clear_dir(&sec_conf.publish_dir).unwrap();
-
-        stream.write_aes(&aes_key, b";session end").unwrap();
     }
 }

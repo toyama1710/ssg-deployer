@@ -21,7 +21,7 @@ pub fn send_file(stream: &mut TcpStream, aes_key: &[u8], pub_dir: &Path) -> io::
         let path = pub_dir.join(&s);
         if path.is_file() {
             let mut file;
-            match File::open(path) {
+            match File::open(&path) {
                 Ok(f) => {
                     file = f;
                     stream.write_aes(&aes_key, b";ok")?;
@@ -35,6 +35,7 @@ pub fn send_file(stream: &mut TcpStream, aes_key: &[u8], pub_dir: &Path) -> io::
             file.read_to_end(&mut buf)?;
             stream.write_aes(&aes_key, &buf)?;
             stream.flush()?;
+            println!("send: {}", path.display());
         } else {
             stream.write_aes(&aes_key, b";err file not found")?;
         }
@@ -59,6 +60,12 @@ pub fn rcv_file(
     };
 
     for path in req {
+        stream.write_aes(&aes_key, path.to_str().unwrap().as_bytes())?;
+    }
+    stream.write_aes(&aes_key, b";end").unwrap();
+    stream.flush().unwrap();
+
+    for path in req {
         let s = f(stream);
         if s == ";end" {
             return Err(Error::new(ErrorKind::Other, "req has too many item"));
@@ -76,9 +83,13 @@ pub fn rcv_file(
         let mut buf = Vec::new();
         stream.read_aes(&aes_key, &mut buf)?;
         file.write(&buf)?;
-
+        println!("recieved: {}", path.display());
         cnt += 1;
     }
-
-    return Ok(cnt);
+    let s = f(stream);
+    if s == ";end" {
+        return Ok(cnt);
+    } else {
+        return Err(Error::new(ErrorKind::Other, "client send too many file"));
+    }
 }

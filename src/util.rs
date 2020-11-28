@@ -130,23 +130,20 @@ pub fn calc_hash(path: &Path) -> io::Result<Vec<(PathBuf, [u8; 32])>> {
 }
 
 pub fn clear_dir(path: &Path) -> io::Result<()> {
-    if path.is_dir() {
-        let p: Vec<PathBuf> = fs::read_dir(path)?
-            .map(|entry| entry.unwrap().path())
-            .collect();
-        if p.is_empty() {
-            std::fs::remove_dir(path)?;
-        } else {
-            for v in p {
-                clear_dir(&v)?;
-            }
-        }
+    if !path.exists() {
+        return Ok(());
     }
-    let p: Vec<PathBuf> = fs::read_dir(path)?
-        .map(|entry| entry.unwrap().path())
-        .collect();
-    if p.is_empty() {
-        std::fs::remove_dir(path)?;
+    if path.is_dir() {
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let path = entry.path();
+            clear_dir(&path)?;
+        }
+
+        let is_empty = path.read_dir()?.next().is_none();
+        if is_empty {
+            std::fs::remove_dir(path)?;
+        }
     }
     return Ok(());
 }
