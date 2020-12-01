@@ -4,11 +4,11 @@ use deployer::file_shake::rcv_file;
 use deployer::tcp_wrap::*;
 use deployer::util;
 use std::collections::BTreeMap;
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::io::{self, Error, ErrorKind};
 use std::net::*;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn main() {
     let conf = dephs::get_config();
@@ -17,6 +17,13 @@ fn main() {
         panic!();
     }
     let (p, sections, auths) = conf.unwrap();
+
+    File::open("/etc/ssg-deployer/error.log").unwrap();
+    let tmp = Path::new("/etc/ssg-deployer/error.log");
+    if !tmp.exists() || !tmp.is_file() {
+        eprintln!("error.log cant open");
+        panic!();
+    }
 
     let addr = format!("0.0.0.0:{}", p);
     let listner = TcpListener::bind(addr).unwrap();
