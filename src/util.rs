@@ -129,7 +129,7 @@ pub fn calc_hash(path: &Path) -> io::Result<Vec<(PathBuf, [u8; 32])>> {
     }
 }
 
-pub fn clear_dir(path: &Path) -> io::Result<()> {
+pub fn clear_empty_dir(path: &Path) -> io::Result<()> {
     if !path.exists() {
         return Ok(());
     }
@@ -137,7 +137,7 @@ pub fn clear_dir(path: &Path) -> io::Result<()> {
         for entry in fs::read_dir(path)? {
             let entry = entry?;
             let path = entry.path();
-            clear_dir(&path)?;
+            clear_empty_dir(&path)?;
         }
 
         let is_empty = path.read_dir()?.next().is_none();
