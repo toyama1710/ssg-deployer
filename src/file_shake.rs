@@ -83,7 +83,7 @@ pub fn rcv_file(
         let mut buf = Vec::new();
         stream.read_aes(&aes_key, &mut buf)?;
         file.write(&buf)?;
-        println!("recieved: {}", path.display());
+        //println!("recieved: {}", path.display());
         cnt += 1;
     }
     let s = f(stream);
