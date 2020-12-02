@@ -1,6 +1,6 @@
 [package]
 name = "deployer"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["toyama1710 <toyama@toyama1710.net>"]
 edition = "2018"
 
@@ -15,7 +15,7 @@ rand = "0.7.3"
 dirs = "3.0.1"
 
 [[bin]]
-name = "deploy-client"
+name = "deploy"
 path = "src/client/main.rs"
 
 [[bin]]
